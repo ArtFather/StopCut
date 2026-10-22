@@ -1,0 +1,29 @@
+<Window x:Class="StopCut.TerminalWindow" Icon="/Assets/app.ico"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Terminal" Height="600" Width="950" WindowStartupLocation="CenterOwner">
+                <DockPanel Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Port" />
+                        <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding Serial.PortName}" Width="90" Margin="0,0,6,0" />
+                        <Button Content="Refresh" Command="{Binding RefreshPortsCommand}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Baud" Margin="6,4,8,4" />
+                        <ComboBox ItemsSource="{Binding BaudRates}" SelectedItem="{Binding Serial.BaudRate}" Width="90" Margin="0,0,12,0" />
+                        <Button Content="Connect" Command="{Binding ConnectCommand}" />
+                        <Button Content="Disconnect" Command="{Binding DisconnectCommand}" />
+                        <CheckBox Content="Hex" IsChecked="{Binding TerminalHex}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                        <CheckBox Content="Timestamps" IsChecked="{Binding TerminalTimestamps}" VerticalAlignment="Center" Margin="12,0,12,0" />
+                        <Button Content="Clear" Command="{Binding ClearTerminalCommand}" />
+                    </StackPanel>
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <Button DockPanel.Dock="Right" Content="Send" IsDefault="True" Margin="6,0,0,0" Command="{Binding SendTerminalCommand}" />
+                        <TextBox DockPanel.Dock="Right" Width="60" Text="{Binding TerminalLineEnding}" ToolTip="Line ending added to each send: \r, \n, \r\n or empty" />
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource FieldLabel}" Text="  Ending" />
+                        <TextBox FontFamily="Consolas" Text="{Binding TerminalInput, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Text to send. Escapes \r \n \t are allowed." />
+                    </DockPanel>
+                    <TextBox Text="{Binding TerminalText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             TextChanged="Log_TextChanged" />
+                </DockPanel>
+</Window>
