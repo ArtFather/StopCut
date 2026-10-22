@@ -33,6 +33,7 @@ public static class CutPlanner
                 Source = $"Use leftover {l.Tag} ({l.Length:0.###})",
                 LeftoverId = l.Id,
                 LeftoverTag = l.Tag,
+                Material = material,
                 StartLength = l.Length,
                 Remaining = l.Length - material.TrimCut,
             })
@@ -49,7 +50,7 @@ public static class CutPlanner
                     result.Unplaced.Add(piece);
                     continue;
                 }
-                bar = new PlannedBar { Source = "New stock", StartLength = material.StockLength, Remaining = usableStock };
+                bar = new PlannedBar { Material = material, Source = "New stock", StartLength = material.StockLength, Remaining = usableStock };
                 bars.Add(bar);
             }
             bar.Cuts.Add(new PlannedCut(bar, piece));

@@ -7,6 +7,16 @@
         <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" Foreground="Gray">
             <Run Text="Lengths are in" /> <Run Text="{Binding UnitLabel, Mode=OneWay}" /><Run Text=". Edit any cell; changes are saved when you close this window. The letter starts each leftover ID of that material (A1, A2...)." />
         </TextBlock>
+        <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8" BorderBrush="#C62828" BorderThickness="1" CornerRadius="4">
+            <WrapPanel>
+                <TextBlock Text="Safety spacer: parts shorter than" VerticalAlignment="Center" FontWeight="Bold" />
+                <TextBox Text="{Binding SpacerMinPartMm}" Width="60" Margin="6,0" VerticalAlignment="Center" />
+                <TextBlock Text="mm are cut with a spacer block of" VerticalAlignment="Center" FontWeight="Bold" />
+                <TextBox Text="{Binding SpacerLengthMm}" Width="60" Margin="6,0" VerticalAlignment="Center" />
+                <TextBlock Text="mm between the stop and the material (the stop moves out by that much). 0 turns it off."
+                           VerticalAlignment="Center" Foreground="Gray" TextWrapping="Wrap" />
+            </WrapPanel>
+        </Border>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
             <Button Content="Add material" Command="{Binding AddLibraryMaterialCommand}" />
             <Button Content="Delete material" Command="{Binding DeleteLibraryMaterialCommand}" />

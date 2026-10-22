@@ -30,9 +30,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly List<byte> _rxPending = new();
     private readonly DispatcherTimer _rxFlushTimer = new() { Interval = TimeSpan.FromMilliseconds(1000) };
     private bool _rxSawCr;
-    private readonly DispatcherTimer _serialQueryTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly DispatcherTimer _serialQueryTimer = new() { Interval = TimeSpan.FromSeconds(4) };
     private bool _awaitingSerial;
     private readonly StringBuilder _versionReply = new();
+    private readonly StringBuilder _versionRaw = new();
+    private bool _serialConfirmed;
+    private int _versionRetries;
     private bool _awaitingPosition;
     private bool _awaitingMmEnable;
     private readonly DispatcherTimer _moveReplyTimer = new() { Interval = TimeSpan.FromSeconds(3) };
@@ -45,7 +48,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _currentPosition = "-";
 
     private Material? _selectedMaterial;
-    private Material? _planMaterial;
     private PlannedCut? _selectedCut;
     private Leftover? _selectedLeftover;
     private Material? _newLeftoverMaterial;
@@ -77,6 +79,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Serial = data.Serial;
         _units = data.Units;
         _jobsFolder = data.JobsFolder;
+        _spacerMinPartMm = data.SpacerMinPartMm;
+        _spacerLengthMm = data.SpacerLengthMm;
         _importedJobFiles = data.ImportedJobFiles;
         if (Serial.MoveCommandTemplate is "{pos}" or "mg{pos}")
         {
@@ -119,7 +123,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         DeleteLibraryMaterialCommand = new RelayCommand(() => DeleteMaterial(LibrarySelection), () => LibrarySelection is not null);
         ResetDoneCommand = new RelayCommand(ResetDone, () => SelectedMaterial is not null);
         SaveCommand = new RelayCommand(Save);
-        BuildPlanCommand = new RelayCommand(BuildPlan, () => SelectedMaterial is not null);
+        BuildPlanCommand = new RelayCommand(
+            () => BuildPlan(SelectedMaterial is { } m ? new[] { m } : Array.Empty<Material>()),
+            () => SelectedMaterial is not null);
+        BuildJobPlanCommand = new RelayCommand(
+            () => BuildPlan(Materials.Where(MaterialInJob).ToList()),
+            () => Materials.Any(MaterialInJob));
+        NextMaterialCommand = new RelayCommand(NextMaterial, () => NextMaterialCut() is not null);
         SendPositionCommand = new RelayCommand(SendPosition, () => IsConnected && SelectedCut is { Status: CutStatus.Pending });
         CutDoneCommand = new RelayCommand(CutDone, () => SelectedCut is { Status: CutStatus.Pending });
         SkipCutCommand = new RelayCommand(SkipCut, () => SelectedCut is { Status: CutStatus.Pending });
@@ -201,7 +211,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(Serial));
 
         Plan.Clear();
-        _planMaterial = null;
         UpdateStick();
         PlanSummary = $"Units changed to {Models.Units.Label(to)}. Build the plan again.";
         CurrentPosition = "-";
@@ -354,7 +363,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void UpdateStick()
     {
         var bar = SelectedCut?.Bar ?? Plan.LastOrDefault()?.Bar;
-        if (bar is null || _planMaterial is not { } m)
+        CurrentMaterialName = SelectedCut is { Status: CutStatus.Pending } now ? now.Bar.Material.Name : "";
+        SpacerWarning = SelectedCut is { Status: CutStatus.Pending, Spacer: > 0 } spaced ? spaced.SpacerNote : "";
+        if (bar is null)
         {
             CurrentStick = null;
             CurrentStickTitle = "";
@@ -362,6 +373,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             StickIsLeftover = false;
             return;
         }
+        var m = bar.Material;
         var pieces = bar.Cuts.Select(c => (c.Length, c == SelectedCut && c.Status == CutStatus.Pending
             ? PieceState.Current
             : c.Status switch { CutStatus.Done => PieceState.Done, CutStatus.Skipped => PieceState.Skipped, _ => PieceState.Pending }))
@@ -372,7 +384,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             : StickIsLeftover ? $"USE LEFTOVER {(bar.LeftoverTag.Length > 0 ? bar.LeftoverTag : bar.Source)}"
             : "NEW STICK";
         var sticks = Plan.Select(c => c.Bar).Distinct().Count();
-        CurrentStickTitle = $"Stick {bar.Number} of {sticks}: {bar.Source}, {bar.StartLength:0.###} {UnitLabel}" +
+        CurrentStickTitle = $"Stick {bar.Number} of {sticks} ({m.Name}): {bar.Source}, {bar.StartLength:0.###} {UnitLabel}" +
                             $"  ({bar.Cuts.Count(c => c.Status == CutStatus.Done)}/{bar.Cuts.Count} cut)";
     }
 
@@ -409,6 +421,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand ResetDoneCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand BuildPlanCommand { get; }
+    public ICommand BuildJobPlanCommand { get; }
+    public ICommand NextMaterialCommand { get; }
     public ICommand SendPositionCommand { get; }
     public ICommand CutDoneCommand { get; }
     public ICommand SkipCutCommand { get; }
@@ -542,6 +556,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         _rxFlushTimer.Stop();
         if (_rxPending.Count > 0) _rxFlushTimer.Start();
+
+        if (_awaitingSerial)
+        {
+            // Firmware 5.x sends its banner slowly and in pieces; check it as it arrives instead of
+            // waiting for each piece's line to be flushed.
+            _versionRaw.Append(Encoding.ASCII.GetString(data));
+            var raw = Regex.Replace(_versionRaw.ToString(), @"[\r\n\0]+", " ").Trim();
+            if (TigerStopController.IsVersionReply(raw) && Regex.IsMatch(raw, @"\d\.\d")) ConfirmTigerStop(raw);
+        }
     }
 
     private void FlushRx()
@@ -566,20 +589,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var text = line.Trim('\0', ' ', '\r', '\n');
         if (text.Length == 0) return;
 
-        if (_awaitingSerial)
+        if (!_serialConfirmed && IsMachineReply(text))
+        {
+            // Any real reply (a move, stop, error or position) proves the amp is there, even if the
+            // version query went unanswered.
+            ConfirmTigerStop(null);
+        }
+        else if (_awaitingSerial)
         {
             // The amp can send its banner in pieces, e.g. "TigerSt" / "op Amp II" / "I ver = 5.23".
             _versionReply.Append(text);
             var banner = _versionReply.ToString();
-            if (!TigerStopController.IsVersionReply(banner) || !banner.Any(char.IsDigit)) return;
-            _awaitingSerial = false;
-            _serialQueryTimer.Stop();
-            ConnectionStatus = $"Connected on {Serial.PortName}: {Regex.Replace(banner, @"\s+", " ")}";
-            MachineStatus = "Ready";
-            // Ask which units the amp uses (D44 = MMEnable: 0 inches, 1 mm); position follows.
-            _awaitingMmEnable = true;
-            _mmEnableLinesLeft = 3;
-            SendMachineCommand("D44");
+            if (TigerStopController.IsVersionReply(banner) && banner.Any(char.IsDigit)) ConfirmTigerStop(banner);
             return;
         }
 
@@ -641,6 +662,31 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _awaitingPosition = false;
             CurrentPosition = FormatMachinePosition(reported);
         }
+    }
+
+    /// <summary>True for lines only a TigerStop sends: MGS/MGF/MSS/MES, "X EC=n", or a bare position.</summary>
+    private static bool IsMachineReply(string text) =>
+        Regex.IsMatch(text, @"^(MGS|MGF|MSS|MES|MHS|MHF)\b") ||
+        Regex.IsMatch(text, @"^X\s*EC\s*=\s*\d+") ||
+        Regex.IsMatch(text, @"^-?\d+(\.\d+)?$");
+
+    /// <summary>Marks the connection as a working TigerStop and reads the amp's units.</summary>
+    private void ConfirmTigerStop(string? banner)
+    {
+        if (_serialConfirmed) return;
+        var wasChecking = _awaitingSerial;
+        _serialConfirmed = true;
+        _awaitingSerial = false;
+        _serialQueryTimer.Stop();
+        ConnectionStatus = banner is null
+            ? $"Connected on {Serial.PortName}: TigerStop is answering"
+            : $"Connected on {Serial.PortName}: {Regex.Replace(banner, @"\s+", " ").Trim()}";
+        if (!wasChecking) return;
+        MachineStatus = "Ready";
+        // Ask which units the amp uses (D44 = MMEnable: 0 inches, 1 mm); position follows.
+        _awaitingMmEnable = true;
+        _mmEnableLinesLeft = 3;
+        SendMachineCommand("D44");
     }
 
     private static bool TryParseNumber(string text, out double value)
@@ -964,10 +1010,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         foreach (var leftover in Leftovers.Where(l => l.MaterialId == material.Id).ToList())
             Leftovers.Remove(leftover);
-        if (_planMaterial == material)
+        if (Plan.Any(c => c.Bar.Material == material))
         {
             Plan.Clear();
-            _planMaterial = null;
+            SelectedCut = null;
             PlanSummary = "The planned material was deleted. Build the plan again.";
         }
         Materials.Remove(material);
@@ -984,27 +1030,51 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     // ---- Cutting ----
 
-    private void BuildPlan()
+    /// <summary>
+    /// Plans the selected job's remaining cuts for the given materials, one after another. Sticks are
+    /// numbered through the whole plan so each one has its own number.
+    /// </summary>
+    private void BuildPlan(IReadOnlyList<Material> materials)
     {
-        if (SelectedMaterial is not { } material) return;
+        if (materials.Count == 0) return;
 
         NewLeftoverTag = "";
         NewLeftoverText = "";
-        var result = CutPlanner.Plan(material, Leftovers.Where(l => l.MaterialId == material.Id), InSelectedJob);
-        _planMaterial = material;
         Plan.Clear();
-        foreach (var bar in result.Bars)
-            foreach (var cut in bar.Cuts)
-                Plan.Add(cut);
-
-        var newBars = result.Bars.Count(b => b.LeftoverId is null);
-        var usedLeftovers = result.Bars.Count - newBars;
-        PlanSummary = $"{SelectedJob} / {material.Name}: {Plan.Count} cuts on {result.Bars.Count} sticks " +
-                      $"({newBars} new stock, {usedLeftovers} leftovers).";
-
-        if (result.Unplaced.Count > 0)
+        var bars = new List<PlannedBar>();
+        var unplaced = new List<CutItem>();
+        var spacerMin = Models.Units.Convert(SpacerMinPartMm, LengthUnit.Millimeters, Units);
+        var spacer = Models.Units.Convert(SpacerLengthMm, LengthUnit.Millimeters, Units);
+        foreach (var material in materials)
         {
-            var parts = string.Join(", ", result.Unplaced.Select(c => $"{c.Label} {c.Length}").Distinct());
+            var result = CutPlanner.Plan(material, Leftovers.Where(l => l.MaterialId == material.Id), InSelectedJob);
+            unplaced.AddRange(result.Unplaced);
+            foreach (var bar in result.Bars)
+            {
+                bar.Number = bars.Count + 1;
+                bars.Add(bar);
+                foreach (var cut in bar.Cuts)
+                {
+                    if (SpacerLengthMm > 0 && cut.Length < spacerMin)
+                    {
+                        cut.Spacer = spacer;
+                        cut.SpacerNote = $"USE {SpacerLengthMm:0.#} mm SPACER";
+                    }
+                    Plan.Add(cut);
+                }
+            }
+        }
+
+        var newBars = bars.Count(b => b.LeftoverId is null);
+        var what = materials.Count == 1 ? materials[0].Name : $"{materials.Count} materials";
+        var spaced = Plan.Count(c => c.Spacer > 0);
+        PlanSummary = $"{SelectedJob} / {what}: {Plan.Count} cuts on {bars.Count} sticks " +
+                      $"({newBars} new stock, {bars.Count - newBars} leftovers)." +
+                      (spaced > 0 ? $" {spaced} short cuts need the {SpacerLengthMm:0.#} mm spacer." : "");
+
+        if (unplaced.Count > 0)
+        {
+            var parts = string.Join(", ", unplaced.Select(c => $"{c.Label} {c.Length}").Distinct());
             MessageBox.Show($"These parts are longer than a full stick and were left out:\n{parts}",
                 "Cut plan", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -1013,9 +1083,42 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         UpdateStick();
     }
 
+    /// <summary>First pending cut of the next material after the current cut's material.</summary>
+    private PlannedCut? NextMaterialCut()
+    {
+        if (SelectedCut is not { } current) return null;
+        var index = Plan.IndexOf(current);
+        return Plan.Skip(index + 1).FirstOrDefault(c => c.Status == CutStatus.Pending && c.Bar.Material != current.Bar.Material);
+    }
+
+    /// <summary>Moves on to the next material in the plan; cuts left on this material stay pending.</summary>
+    private void NextMaterial()
+    {
+        if (NextMaterialCut() is not { } next) return;
+        SelectedCut = next;
+        if (AutoSendNext && IsConnected) MoveTo(next.StopPosition);
+    }
+
+    // ---- Short-part spacer ----
+
+    private double _spacerMinPartMm = 100;
+    private double _spacerLengthMm = 300;
+    private string _spacerWarning = "";
+
+    public double SpacerMinPartMm { get => _spacerMinPartMm; set { if (Set(ref _spacerMinPartMm, Math.Max(0, value))) Save(); } }
+    public double SpacerLengthMm { get => _spacerLengthMm; set { if (Set(ref _spacerLengthMm, Math.Max(0, value))) Save(); } }
+
+    /// <summary>"USE 300 mm SPACER" while the current cut needs the spacer; empty otherwise.</summary>
+    public string SpacerWarning { get => _spacerWarning; private set => Set(ref _spacerWarning, value); }
+
+    private string _currentMaterialName = "";
+
+    /// <summary>Material of the cut being made, shown beside NOW CUTTING.</summary>
+    public string CurrentMaterialName { get => _currentMaterialName; private set => Set(ref _currentMaterialName, value); }
+
     private void SendPosition()
     {
-        if (SelectedCut is { } cut) MoveTo(cut.Length);
+        if (SelectedCut is { } cut) MoveTo(cut.StopPosition);
     }
 
     private void CutDone()
@@ -1054,7 +1157,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             PlanSummary += " All cuts finished.";
             return;
         }
-        if (AutoSendNext && IsConnected) MoveTo(SelectedCut.Length);
+        if (AutoSendNext && IsConnected) MoveTo(SelectedCut.StopPosition);
     }
 
     /// <summary>
@@ -1096,7 +1199,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void FinishBarIfComplete(PlannedBar bar)
     {
-        if (bar.Finished || _planMaterial is not { } material) return;
+        if (bar.Finished) return;
+        var material = bar.Material;
         if (bar.Cuts.Any(c => c.Status == CutStatus.Pending)) return;
         bar.Finished = true;
 
@@ -1167,7 +1271,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ConnectionStatus = $"Port {Serial.PortName} open, checking for a TigerStop...";
             Save();
             _awaitingSerial = true;
+            _serialConfirmed = false;
+            _versionRetries = 0;
             _versionReply.Clear();
+            _versionRaw.Clear();
             _serialQueryTimer.Start();
             _tigerStop.SendCommand(TigerStopController.VersionCommand, Serial);
         }
@@ -1182,9 +1289,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         _serialQueryTimer.Stop();
         if (!_awaitingSerial) return;
+        if (_versionRetries++ == 0)
+        {
+            // Slow amps can miss or answer late to the first query; ask once more.
+            _versionReply.Clear();
+            _versionRaw.Clear();
+            _serialQueryTimer.Start();
+            try { _tigerStop.SendCommand(TigerStopController.VersionCommand, Serial); } catch { }
+            return;
+        }
         _awaitingSerial = false;
-        ConnectionStatus = $"Port {Serial.PortName} open, but no TigerStop answered the version query. " +
-                           "Check the baud rate (the amp's CommBaud setting), or use Find TigerStop.";
+        // Not an error: some amps don't answer the version query. The status turns to "Connected"
+        // as soon as the amp answers anything (a move, position or error).
+        ConnectionStatus = $"Port {Serial.PortName} open. The TigerStop didn't answer the version query, " +
+                           "but commands are sent. If moves don't work, check the baud rate or use Find TigerStop.";
     }
 
     private async void FindTigerStop()
@@ -1242,6 +1360,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _tigerStop.Close();
         FlushRx();
         _awaitingSerial = false;
+        _serialConfirmed = false;
         _serialQueryTimer.Stop();
         MachineStatus = "";
         IsConnected = false;
@@ -1298,6 +1417,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             {
                 Materials = Materials.ToList(), Leftovers = Leftovers.ToList(), Serial = Serial, Units = Units,
                 JobsFolder = JobsFolder, ImportedJobFiles = _importedJobFiles,
+                SpacerMinPartMm = SpacerMinPartMm, SpacerLengthMm = SpacerLengthMm,
             });
         }
         catch (Exception ex)

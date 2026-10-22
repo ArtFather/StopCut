@@ -9,6 +9,7 @@ public enum CutStatus { Pending, Done, Skipped }
 public sealed class PlannedBar
 {
     public int Number { get; set; }
+    public Material Material { get; set; } = null!;
     public string Source { get; set; } = "";
     public Guid? LeftoverId { get; set; }
     /// <summary>The leftover's ID (e.g. "A3") when this stick is a leftover.</summary>
@@ -30,6 +31,16 @@ public sealed class PlannedCut : ObservableObject
         Item = item;
         Length = item.Length;
     }
+
+    /// <summary>Spacer block to put between the stop and the material (0 = none). Set when the plan is built.</summary>
+    public double Spacer { get; set; }
+
+    /// <summary>Where the stop goes: the part length plus the spacer.</summary>
+    public double StopPosition => Length + Spacer;
+
+    public string MaterialName => Bar.Material.Name;
+    public string SpacerNote { get; set; } = "";
+    public bool NeedsSpacer => Spacer > 0;
 
     public PlannedBar Bar { get; }
     public CutItem Item { get; }

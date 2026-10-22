@@ -48,7 +48,13 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
   minimum leftover). Deleting a material that cut lines or leftovers still use asks first and lists what goes with it.
 - **Now cutting**: the Cutting tab and the dashboard show the length and part being cut in very large text, the last
   cut below it, and a to-scale drawing of the current stick (trim, pieces, kerfs, leftover) with the piece being cut
-  outlined in red and finished pieces greyed out with a check mark.
+  outlined and finished pieces greyed out with a check mark. The material being cut is shown beside NOW CUTTING.
+- **Planning**: "Plan material" plans the selected material; "Plan whole job" plans every material of the job, one
+  after another, with sticks numbered through the whole plan. "Next material" jumps to the first cut of the next
+  material and leaves the rest of the current one in the plan.
+- **Safety spacer**: parts shorter than 100 mm are cut with a 300 mm spacer block between the stop and the material.
+  The stop moves to part length + 300 mm, the plan marks those cuts, and NOW CUTTING shows "USE 300 mm SPACER" in red.
+  Both numbers are set in the Material library (0 turns it off).
 - **Leftover IDs**: every leftover gets an ID made of its material's letter and a number (A1, A2 for one material, B1 for the next; letters are set in the Material library, and numbers of used-up leftovers are reused) to write on the physical piece. When cutting
   creates a leftover, its ID is shown in large green text on the Cutting tab and the dashboard. The plan says
   "Use leftover A12" when it uses one.
@@ -81,7 +87,9 @@ Commands end with a carriage return (CR).
 | Any error | | `X EC=<code> <text>` |
 
 **Find TigerStop** tries every COM port at 57600 (the amp default), 9600, 19200, 38400, 115200 and 230400 baud
-(8-N-1, DTR and RTS on) until the amp answers `V`. Positions are in the amp's units (inches unless MMEnable, D44, is on).
+(8-N-1, DTR and RTS on) until the amp answers `V`. After Connect, the status turns to "Connected" when the amp answers the version
+query or anything else (a move, position or error); some amps answer `V` slowly or not at all, so no answer is
+reported as a note, not an error. Positions are in the amp's units (inches unless MMEnable, D44, is on).
 **Position offset** in Settings > TigerStop connection is added to every part length for calibration.
 
 ## Project layout

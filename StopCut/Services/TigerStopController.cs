@@ -104,7 +104,7 @@ public sealed class TigerStopController : IDisposable
                     port.DiscardInBuffer();
                     port.Write(query, 0, query.Length);
                     var reply = new StringBuilder();
-                    for (var waited = 0; waited < 1500 && !IsVersionReply(reply.ToString()); waited += 100)
+                    for (var waited = 0; waited < 3000 && !IsVersionReply(reply.ToString()); waited += 100)
                     {
                         Thread.Sleep(100);
                         reply.Append(port.ReadExisting());

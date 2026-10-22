@@ -13,6 +13,12 @@ public sealed class AppData
     /// <summary>Folder scanned for job CSVs at startup; empty when not set.</summary>
     public string JobsFolder { get; set; } = "";
 
+    /// <summary>Parts shorter than this (mm) are cut with a spacer block between the stop and the material.</summary>
+    public double SpacerMinPartMm { get; set; } = 100;
+
+    /// <summary>Length of that spacer block (mm); the stop moves out by this much for those parts.</summary>
+    public double SpacerLengthMm { get; set; } = 300;
+
     /// <summary>Job CSVs already loaded from the jobs folder: file name to "size|last write ticks".</summary>
     public Dictionary<string, string> ImportedJobFiles { get; set; } = new();
 

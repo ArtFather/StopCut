@@ -86,7 +86,9 @@
 
                         <Border Padding="12,6" Margin="0,0,0,16" Background="#EAF3FB" BorderBrush="#1E6FB8" BorderThickness="2" CornerRadius="6">
                             <StackPanel>
-                                <TextBlock Text="NOW CUTTING" FontSize="16" FontWeight="Bold" Foreground="#1E6FB8" />
+                                <TextBlock FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis">
+                                    <Run Text="NOW CUTTING" Foreground="#1E6FB8" /><Run Text="   " /><Run Text="{Binding CurrentMaterialName, Mode=OneWay}" />
+                                </TextBlock>
                                 <Border Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
                                     <Border.Style>
                                         <Style TargetType="Border">
@@ -103,6 +105,20 @@
                                     </Border.Style>
                                     <Viewbox StretchDirection="DownOnly">
                                         <TextBlock Text="{Binding StickToUse}" FontSize="36" FontWeight="Bold" Foreground="White" />
+                                    </Viewbox>
+                                </Border>
+                                <Border Margin="0,0,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left" Background="#C62828">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SpacerWarning}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Viewbox StretchDirection="DownOnly">
+                                        <TextBlock Text="{Binding SpacerWarning}" FontSize="36" FontWeight="Bold" Foreground="White" />
                                     </Viewbox>
                                 </Border>
                                 <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
@@ -249,7 +265,8 @@
                         <TextBlock Style="{StaticResource FieldLabel}" Text="Material" />
                         <ComboBox ItemsSource="{Binding JobMaterials}" SelectedItem="{Binding SelectedMaterial}"
                                   DisplayMemberPath="Name" Width="260" Margin="0,0,12,0" />
-                        <Button Content="Build plan" Command="{Binding BuildPlanCommand}" />
+                        <Button Content="Plan material" Command="{Binding BuildPlanCommand}" ToolTip="Plan the selected material only" />
+                        <Button Content="Plan whole job" Command="{Binding BuildJobPlanCommand}" ToolTip="Plan every material of the selected job" />
                         <CheckBox Content="Send next position automatically" IsChecked="{Binding AutoSendNext}"
                                   VerticalAlignment="Center" Margin="12,0,0,0" />
                     </StackPanel>
@@ -283,25 +300,43 @@
                                     </RowDefinition.Style>
                                 </RowDefinition>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="NOW CUTTING" FontSize="20" FontWeight="Bold" Foreground="#1E6FB8" />
-                            <Border Grid.Row="1" Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="SlateGray" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding StickIsLeftover}" Value="True">
-                                                <Setter Property="Background" Value="#6A1B9A" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding StickToUse}" Value="">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <Viewbox StretchDirection="DownOnly">
-                                    <TextBlock Text="{Binding StickToUse}" FontSize="44" FontWeight="Bold" Foreground="White" />
-                                </Viewbox>
-                            </Border>
+                            <TextBlock Grid.Row="0" FontSize="20" FontWeight="Bold" TextTrimming="CharacterEllipsis">
+                                <Run Text="NOW CUTTING" Foreground="#1E6FB8" /><Run Text="   " /><Run Text="{Binding CurrentMaterialName, Mode=OneWay}" />
+                            </TextBlock>
+                            <StackPanel Grid.Row="1">
+                                <Border Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="SlateGray" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding StickIsLeftover}" Value="True">
+                                                    <Setter Property="Background" Value="#6A1B9A" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding StickToUse}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Viewbox StretchDirection="DownOnly">
+                                        <TextBlock Text="{Binding StickToUse}" FontSize="44" FontWeight="Bold" Foreground="White" />
+                                    </Viewbox>
+                                </Border>
+                                <Border Margin="0,0,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left" Background="#C62828">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SpacerWarning}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Viewbox StretchDirection="DownOnly">
+                                        <TextBlock Text="{Binding SpacerWarning}" FontSize="40" FontWeight="Bold" Foreground="White" />
+                                    </Viewbox>
+                                </Border>
+                            </StackPanel>
                             <Viewbox Grid.Row="2" StretchDirection="DownOnly" HorizontalAlignment="Left" VerticalAlignment="Top">
                                 <TextBlock Text="{Binding NowCuttingSize}" FontSize="96" FontWeight="Bold" />
                             </Viewbox>
@@ -340,11 +375,13 @@
                         <Button Style="{StaticResource BigButton}" Content="Send position" Command="{Binding SendPositionCommand}" />
                         <Button Style="{StaticResource BigButton}" Content="Cut done" Command="{Binding CutDoneCommand}" />
                         <Button Style="{StaticResource BigButton}" Content="Skip" Command="{Binding SkipCutCommand}" />
+                        <Button Style="{StaticResource BigButton}" Content="Next material" Command="{Binding NextMaterialCommand}"
+                                ToolTip="Go to the first cut of the next material; cuts left here stay in the plan" />
                         <Button Style="{StaticResource BigButton}" Content="Home" Command="{Binding HomeCommand}" />
                         <Button Style="{StaticResource BigButton}" Content="STOP" Foreground="White" Background="Firebrick"
                                 Command="{Binding StopCommand}" />
                         <TextBlock VerticalAlignment="Center" FontSize="22" FontWeight="Bold"
-                                   Text="{Binding SelectedCut.Length, StringFormat='Next: {0:0.###}'}" />
+                                   Text="{Binding SelectedCut.StopPosition, StringFormat='Stop at: {0:0.###}'}" />
                     </StackPanel>
                     <DataGrid ItemsSource="{Binding Plan}" SelectedItem="{Binding SelectedCut}"
                               AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
@@ -357,14 +394,23 @@
                                     <DataTrigger Binding="{Binding Status}" Value="Skipped">
                                         <Setter Property="Foreground" Value="Crimson" />
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Status}" Value="Pending" />
+                                            <Condition Binding="{Binding NeedsSpacer}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Background" Value="#FFEBEE" />
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
+                            <DataGridTextColumn Header="Material" Binding="{Binding MaterialName}" Width="160" />
                             <DataGridTextColumn Header="Stick" Binding="{Binding BarNumber}" Width="60" />
                             <DataGridTextColumn Header="From" Binding="{Binding Source}" Width="160" />
                             <DataGridTextColumn Header="Part / label" Binding="{Binding Label}" Width="*" />
                             <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="120" />
+                            <DataGridTextColumn Header="Spacer" Binding="{Binding SpacerNote}" Width="170" FontWeight="Bold" Foreground="#C62828" />
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
                         </DataGrid.Columns>
                     </DataGrid>
