@@ -278,6 +278,7 @@
                                         </Style>
                                     </RowDefinition.Style>
                                 </RowDefinition>
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" FontSize="20" FontWeight="Bold" TextTrimming="CharacterEllipsis">
                                 <Run Text="NOW CUTTING" Foreground="#1E6FB8" /><Run Text="   " /><Run Text="{Binding CurrentMaterialName, Mode=OneWay}" />
@@ -348,6 +349,10 @@
                                     <TextBlock Grid.Row="2" Text="{Binding NewLeftoverText}" FontSize="16" TextWrapping="Wrap" />
                                 </Grid>
                             </Border>
+                            <StackPanel Grid.Row="8" Margin="0,12,0,0">
+                                <TextBlock Text="{Binding CurrentStickTitle}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                <c:StickView Stick="{Binding CurrentStick}" Height="70" />
+                            </StackPanel>
                         </Grid>
                     </Border>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
@@ -383,10 +388,6 @@
                                 Command="{Binding StopCommand}" />
                         <TextBlock VerticalAlignment="Center" FontSize="22" FontWeight="Bold"
                                    Text="{Binding SelectedCut.StopPosition, StringFormat='Stop at: {0:0.###}'}" />
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding CurrentStickTitle}" FontSize="16" FontWeight="Bold" Margin="0,0,0,4" />
-                        <c:StickView Stick="{Binding CurrentStick}" Height="70" />
                     </StackPanel>
                     <DataGrid ItemsSource="{Binding Plan}" SelectedItem="{Binding SelectedCut}"
                               AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
