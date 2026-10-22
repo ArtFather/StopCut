@@ -29,16 +29,16 @@ public sealed class StickView : FrameworkElement
         set => SetValue(StickProperty, value);
     }
 
-    private static readonly Brush PendingFill = Freeze(new SolidColorBrush(Color.FromRgb(0xDC, 0xE3, 0xEA)));
-    private static readonly Brush CurrentFill = Freeze(new SolidColorBrush(Color.FromRgb(0x29, 0xB6, 0xF6)));
-    private static readonly Brush DoneFill = Freeze(new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)));
+    private static readonly Brush PendingFill = Freeze(new SolidColorBrush(Color.FromRgb(0xE4, 0xE4, 0xE4)));
+    private static readonly Brush CurrentFill = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xA7, 0x26)));
+    private static readonly Brush DoneFill = Freeze(new SolidColorBrush(Color.FromRgb(0x81, 0xC7, 0x84)));
     private static readonly Brush SkippedFill = Brushes.White;
     private static readonly Brush KerfFill = Brushes.Black;
     private static readonly Brush TrimFill = Freeze(new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)));
-    private static readonly Brush LeftoverFill = Freeze(new SolidColorBrush(Color.FromRgb(0x9C, 0xD9, 0x8F)));
+    private static readonly Brush LeftoverFill = Freeze(new SolidColorBrush(Color.FromRgb(0x64, 0xB5, 0xF6)));
     private static readonly Brush ScrapFill = Freeze(new SolidColorBrush(Color.FromRgb(0xEE, 0xEE, 0xEE)));
     private static readonly Pen Outline = Freeze(new Pen(Brushes.DimGray, 1));
-    private static readonly Pen CurrentOutline = Freeze(new Pen(new SolidColorBrush(Color.FromRgb(0x0D, 0x47, 0xA1)), 3));
+    private static readonly Pen CurrentOutline = Freeze(new Pen(new SolidColorBrush(Color.FromRgb(0xE6, 0x51, 0x00)), 3));
 
     private static T Freeze<T>(T f) where T : Freezable { f.Freeze(); return f; }
 
@@ -76,7 +76,7 @@ public sealed class StickView : FrameworkElement
             dc.DrawRectangle(fill, Outline, r);
             var text = state == PieceState.Done ? $"✓ {length:0.###}" : $"{length:0.###}";
             DrawText(dc, text, new Point(r.X + 4, r.Y + h / 2 - 10), state == PieceState.Current ? 18 : 14,
-                state == PieceState.Done ? Brushes.DimGray : Brushes.Black, r.Width - 8);
+                Brushes.Black, r.Width - 8);
             if (state == PieceState.Current) current = r;
             if (s.Kerf > 0) dc.DrawRectangle(KerfFill, null, Segment(s.Kerf));
         }

@@ -47,8 +47,8 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
 - **Material library** (Settings menu): add, edit and delete materials (code, name, stock length, kerf, end trim,
   minimum leftover). Deleting a material that cut lines or leftovers still use asks first and lists what goes with it.
 - **Now cutting**: the Cutting tab and the dashboard show the length and part being cut in very large text, the last
-  cut below it, and a to-scale drawing of the current stick (trim, pieces, kerfs, leftover) with the piece being cut
-  outlined and finished pieces greyed out with a check mark. The material being cut is shown beside NOW CUTTING.
+  cut below it, and a to-scale drawing of the current stick (trim, pieces, kerfs, leftover) where the piece being cut is orange,
+  pieces already cut are green with a check mark, pieces still to cut are grey and the leftover is blue. The material being cut is shown beside NOW CUTTING.
 - **Planning**: "Plan material" plans the selected material; "Plan whole job" plans every material of the job, one
   after another, with sticks numbered through the whole plan. "Next material" jumps to the first cut of the next
   material and leaves the rest of the current one in the plan.
