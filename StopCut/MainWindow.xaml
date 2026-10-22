@@ -84,9 +84,9 @@
                         <TextBlock Text="{Binding CurrentStickTitle}" FontSize="14" Margin="0,0,0,4" TextWrapping="Wrap" />
                         <c:StickView Stick="{Binding CurrentStick}" Height="60" Margin="0,0,0,12" />
 
-                        <Border Padding="12,6" Margin="0,0,0,16" Background="#FFF7E6" BorderBrush="Orange" BorderThickness="2" CornerRadius="6">
+                        <Border Padding="12,6" Margin="0,0,0,16" Background="#EAF3FB" BorderBrush="#1E6FB8" BorderThickness="2" CornerRadius="6">
                             <StackPanel>
-                                <TextBlock Text="NOW CUTTING" FontSize="16" FontWeight="Bold" Foreground="DarkOrange" />
+                                <TextBlock Text="NOW CUTTING" FontSize="16" FontWeight="Bold" Foreground="#1E6FB8" />
                                 <Border Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
                                     <Border.Style>
                                         <Style TargetType="Border">
@@ -258,8 +258,8 @@
                         <TextBlock Text="{Binding CurrentStickTitle}" FontSize="16" FontWeight="Bold" Margin="0,0,0,4" />
                         <c:StickView Stick="{Binding CurrentStick}" Height="70" />
                     </StackPanel>
-                    <Border DockPanel.Dock="Right" Width="440" Margin="12,0,0,0" Padding="16" Background="#FFF7E6"
-                            BorderBrush="Orange" BorderThickness="2" CornerRadius="6">
+                    <Border DockPanel.Dock="Right" Width="440" Margin="12,0,0,0" Padding="16" Background="#EAF3FB"
+                            BorderBrush="#1E6FB8" BorderThickness="2" CornerRadius="6">
                         <!-- Star rows share the panel height; the big numbers sit in Viewboxes so they shrink instead of clipping. -->
                         <Grid>
                             <Grid.RowDefinitions>
@@ -283,7 +283,7 @@
                                     </RowDefinition.Style>
                                 </RowDefinition>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="NOW CUTTING" FontSize="20" FontWeight="Bold" Foreground="DarkOrange" />
+                            <TextBlock Grid.Row="0" Text="NOW CUTTING" FontSize="20" FontWeight="Bold" Foreground="#1E6FB8" />
                             <Border Grid.Row="1" Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
                                 <Border.Style>
                                     <Style TargetType="Border">
@@ -355,7 +355,7 @@
                                         <Setter Property="Foreground" Value="Gray" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Status}" Value="Skipped">
-                                        <Setter Property="Foreground" Value="DarkOrange" />
+                                        <Setter Property="Foreground" Value="Crimson" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

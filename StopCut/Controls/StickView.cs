@@ -29,8 +29,8 @@ public sealed class StickView : FrameworkElement
         set => SetValue(StickProperty, value);
     }
 
-    private static readonly Brush PendingFill = Freeze(new SolidColorBrush(Color.FromRgb(0xB8, 0xD4, 0xEE)));
-    private static readonly Brush CurrentFill = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x1C)));
+    private static readonly Brush PendingFill = Freeze(new SolidColorBrush(Color.FromRgb(0xDC, 0xE3, 0xEA)));
+    private static readonly Brush CurrentFill = Freeze(new SolidColorBrush(Color.FromRgb(0x29, 0xB6, 0xF6)));
     private static readonly Brush DoneFill = Freeze(new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)));
     private static readonly Brush SkippedFill = Brushes.White;
     private static readonly Brush KerfFill = Brushes.Black;
@@ -38,7 +38,7 @@ public sealed class StickView : FrameworkElement
     private static readonly Brush LeftoverFill = Freeze(new SolidColorBrush(Color.FromRgb(0x9C, 0xD9, 0x8F)));
     private static readonly Brush ScrapFill = Freeze(new SolidColorBrush(Color.FromRgb(0xEE, 0xEE, 0xEE)));
     private static readonly Pen Outline = Freeze(new Pen(Brushes.DimGray, 1));
-    private static readonly Pen CurrentOutline = Freeze(new Pen(Brushes.Red, 3));
+    private static readonly Pen CurrentOutline = Freeze(new Pen(new SolidColorBrush(Color.FromRgb(0x0D, 0x47, 0xA1)), 3));
 
     private static T Freeze<T>(T f) where T : Freezable { f.Freeze(); return f; }
 
