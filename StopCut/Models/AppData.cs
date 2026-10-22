@@ -5,6 +5,9 @@ public sealed class AppData
 {
     public List<Material> Materials { get; set; } = new();
     public List<Leftover> Leftovers { get; set; } = new();
+
+    /// <summary>Recuts and on-the-fly extra parts, newest last.</summary>
+    public List<RecutRecord> Recuts { get; set; } = new();
     public SerialSettings Serial { get; set; } = new();
 
     /// <summary>Units every length in the app is entered and stored in.</summary>

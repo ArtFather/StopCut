@@ -271,6 +271,14 @@
                                   VerticalAlignment="Center" Margin="12,0,0,0" />
                     </StackPanel>
                     <TextBlock DockPanel.Dock="Top" Text="{Binding PlanSummary}" Margin="0,8" TextWrapping="Wrap" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Extra part on the fly: length" />
+                        <TextBox Style="{StaticResource Field}" Text="{Binding ExtraLength, UpdateSourceTrigger=PropertyChanged}" Width="90" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="qty" />
+                        <TextBox Style="{StaticResource Field}" Text="{Binding ExtraQuantity, UpdateSourceTrigger=PropertyChanged}" Width="50" />
+                        <Button Content="Add and cut next" Command="{Binding AddExtraPartCommand}"
+                                ToolTip="Adds the part to this job and material and puts it first in the plan" />
+                    </StackPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                         <TextBlock Text="{Binding CurrentStickTitle}" FontSize="16" FontWeight="Bold" Margin="0,0,0,4" />
                         <c:StickView Stick="{Binding CurrentStick}" Height="70" />
@@ -375,6 +383,8 @@
                         <Button Style="{StaticResource BigButton}" Content="Send position" Command="{Binding SendPositionCommand}" />
                         <Button Style="{StaticResource BigButton}" Content="Cut done" Command="{Binding CutDoneCommand}" />
                         <Button Style="{StaticResource BigButton}" Content="Skip" Command="{Binding SkipCutCommand}" />
+                        <Button Style="{StaticResource BigButton}" Content="Recut" Command="{Binding RecutCommand}"
+                                ToolTip="The selected part came out bad: cut it again next" />
                         <Button Style="{StaticResource BigButton}" Content="Next material" Command="{Binding NextMaterialCommand}"
                                 ToolTip="Go to the first cut of the next material; cuts left here stay in the plan" />
                         <Button Style="{StaticResource BigButton}" Content="Home" Command="{Binding HomeCommand}" />
@@ -412,9 +422,24 @@
                             <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="120" />
                             <DataGridTextColumn Header="Spacer" Binding="{Binding SpacerNote}" Width="170" FontWeight="Bold" Foreground="#C62828" />
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                            <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="110" FontWeight="Bold" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>
+            </TabItem>
+
+            <!-- Recuts -->
+            <TabItem Header="Recuts">
+                <DataGrid Margin="8" ItemsSource="{Binding Recuts}" AutoGenerateColumns="False" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="When" Binding="{Binding Time, StringFormat='yyyy-MM-dd HH:mm'}" Width="140" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="80" />
+                        <DataGridTextColumn Header="Job" Binding="{Binding Job}" Width="160" />
+                        <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="*" />
+                        <DataGridTextColumn Header="Part" Binding="{Binding Label}" Width="160" />
+                        <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
+                    </DataGrid.Columns>
+                </DataGrid>
             </TabItem>
 
             <!-- Leftovers -->

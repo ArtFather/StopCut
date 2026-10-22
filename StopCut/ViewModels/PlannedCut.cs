@@ -42,6 +42,11 @@ public sealed class PlannedCut : ObservableObject
     public string SpacerNote { get; set; } = "";
     public bool NeedsSpacer => Spacer > 0;
 
+    private string _note = "";
+
+    /// <summary>"Bad - recut", "Recut" or "Extra" for parts changed while cutting.</summary>
+    public string Note { get => _note; set => Set(ref _note, value); }
+
     public PlannedBar Bar { get; }
     public CutItem Item { get; }
     public double Length { get; }

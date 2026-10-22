@@ -52,6 +52,9 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
 - **Planning**: "Plan material" plans the selected material; "Plan whole job" plans every material of the job, one
   after another, with sticks numbered through the whole plan. "Next material" jumps to the first cut of the next
   material and leaves the rest of the current one in the plan.
+- **Recut on the fly**: "Recut" (Cutting tab) marks the selected part as bad and puts a new cut of it first in the
+  plan, on the stick in use if it fits, else another planned stick, a free leftover or new stock. "Extra part on the
+  fly" adds a one-off part (length and quantity) to the job and cuts it next. Both are logged on the Recuts tab.
 - **Safety spacer**: parts shorter than 100 mm are cut with a 300 mm spacer block between the stop and the material.
   The stop moves to part length + 300 mm, the plan marks those cuts, and NOW CUTTING shows "USE 300 mm SPACER" in red.
   Both numbers are set in the Material library (0 turns it off).

@@ -67,6 +67,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 MessageBox.Show(problem, "StopCut", MessageBoxButton.OK, MessageBoxImage.Warning));
         Materials = new ObservableCollection<Material>(data.Materials);
         Leftovers = new ObservableCollection<Leftover>(data.Leftovers);
+        Recuts = new ObservableCollection<RecutRecord>(data.Recuts);
         foreach (var m in Materials.Where(m => m.Letter.Length == 0)) m.Letter = NextMaterialLetter();
         // Re-ID leftovers saved without an ID, or with one that doesn't start with their material's letter.
         foreach (var l in Leftovers.OrderBy(l => l.Created).ToList())
@@ -130,6 +131,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             () => BuildPlan(Materials.Where(MaterialInJob).ToList()),
             () => Materials.Any(MaterialInJob));
         NextMaterialCommand = new RelayCommand(NextMaterial, () => NextMaterialCut() is not null);
+        RecutCommand = new RelayCommand(RecutSelected, () => SelectedCut is { Note: not "Bad - recut", Status: not CutStatus.Skipped });
+        AddExtraPartCommand = new RelayCommand(AddExtraPart, () => Plan.Count > 0 || SelectedMaterial is not null);
         SendPositionCommand = new RelayCommand(SendPosition, () => IsConnected && SelectedCut is { Status: CutStatus.Pending });
         CutDoneCommand = new RelayCommand(CutDone, () => SelectedCut is { Status: CutStatus.Pending });
         SkipCutCommand = new RelayCommand(SkipCut, () => SelectedCut is { Status: CutStatus.Pending });
@@ -423,6 +426,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand BuildPlanCommand { get; }
     public ICommand BuildJobPlanCommand { get; }
     public ICommand NextMaterialCommand { get; }
+    public ICommand RecutCommand { get; }
+    public ICommand AddExtraPartCommand { get; }
     public ICommand SendPositionCommand { get; }
     public ICommand CutDoneCommand { get; }
     public ICommand SkipCutCommand { get; }
@@ -1043,8 +1048,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Plan.Clear();
         var bars = new List<PlannedBar>();
         var unplaced = new List<CutItem>();
-        var spacerMin = Models.Units.Convert(SpacerMinPartMm, LengthUnit.Millimeters, Units);
-        var spacer = Models.Units.Convert(SpacerLengthMm, LengthUnit.Millimeters, Units);
         foreach (var material in materials)
         {
             var result = CutPlanner.Plan(material, Leftovers.Where(l => l.MaterialId == material.Id), InSelectedJob);
@@ -1055,11 +1058,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 bars.Add(bar);
                 foreach (var cut in bar.Cuts)
                 {
-                    if (SpacerLengthMm > 0 && cut.Length < spacerMin)
-                    {
-                        cut.Spacer = spacer;
-                        cut.SpacerNote = $"USE {SpacerLengthMm:0.#} mm SPACER";
-                    }
+                    ApplySpacer(cut);
                     Plan.Add(cut);
                 }
             }
@@ -1099,7 +1098,132 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (AutoSendNext && IsConnected) MoveTo(next.StopPosition);
     }
 
+    // ---- Recut on the fly ----
+
+    private string _extraLength = "";
+    private string _extraQuantity = "1";
+
+    public ObservableCollection<RecutRecord> Recuts { get; }
+    public string ExtraLength { get => _extraLength; set => Set(ref _extraLength, value); }
+    public string ExtraQuantity { get => _extraQuantity; set => Set(ref _extraQuantity, value); }
+
+    /// <summary>
+    /// The selected part came out bad: it counts as not cut, and a new cut of the same part goes into
+    /// the plan as the next cut.
+    /// </summary>
+    private void RecutSelected()
+    {
+        if (SelectedCut is not { } bad) return;
+        if (MessageBox.Show($"Recut {bad.Label} ({bad.Length:0.###} {UnitLabel})? It is added to the plan as the next cut.",
+                "Recut", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+        // A bad part used up its material either way; it just doesn't count toward the quantity.
+        if (bad.Status == CutStatus.Done) bad.Item.Done = Math.Max(0, bad.Item.Done - 1);
+        bad.Status = CutStatus.Done;
+        bad.Note = "Bad - recut";
+        var recut = PlanExtraCut(bad.Item, bad.Bar.Material, "Recut", bad.Bar);
+        FinishBarIfComplete(bad.Bar);
+        if (recut is null) return;
+        Record("Recut", bad.Item, bad.Bar.Material);
+        Save();
+        GoTo(recut);
+    }
+
+    /// <summary>Adds a one-off part (length and quantity) to the job and plans it to be cut next.</summary>
+    private void AddExtraPart()
+    {
+        var material = SelectedCut?.Bar.Material ?? SelectedMaterial;
+        if (material is null) return;
+        if (!TryParseLength(ExtraLength, out var length) || length <= 0 ||
+            !int.TryParse(ExtraQuantity, out var quantity) || quantity < 1)
+        {
+            MessageBox.Show("Enter the extra part's length and quantity.", "Extra part", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var item = new CutItem { Job = JobFilter ?? "", Label = "Extra", Length = length, Quantity = quantity };
+        material.Cuts.Add(item);
+        PlannedCut? first = null;
+        for (var i = 0; i < quantity; i++)
+        {
+            var cut = PlanExtraCut(item, material, "Extra", SelectedCut?.Bar);
+            if (cut is null) break;
+            first ??= cut;
+        }
+        Record("Extra", item, material);
+        ExtraLength = "";
+        ExtraQuantity = "1";
+        Save();
+        if (first is not null) GoTo(first);
+    }
+
+    /// <summary>
+    /// Puts one more cut of <paramref name="item"/> into the plan, ahead of the remaining cuts. It goes on
+    /// the stick in use if it fits, else another planned stick with room, else a free leftover, else new stock.
+    /// </summary>
+    private PlannedCut? PlanExtraCut(CutItem item, Material material, string note, PlannedBar? preferred)
+    {
+        var length = item.Length;
+        var bars = Plan.Select(c => c.Bar).Distinct().ToList();
+        var bar = preferred is { Finished: false } && preferred.Material == material && preferred.Remaining >= length
+            ? preferred
+            : bars.Where(b => !b.Finished && b.Material == material && b.Remaining >= length).MinBy(b => b.Remaining);
+        if (bar is null)
+        {
+            var inPlan = bars.Select(b => b.LeftoverId).ToHashSet();
+            var leftover = Leftovers
+                .Where(l => l.MaterialId == material.Id && !inPlan.Contains(l.Id) && l.Length - material.TrimCut >= length)
+                .MinBy(l => l.Length);
+            if (leftover is not null)
+                bar = new PlannedBar
+                {
+                    Material = material, Source = $"Use leftover {leftover.Tag} ({leftover.Length:0.###})",
+                    LeftoverId = leftover.Id, LeftoverTag = leftover.Tag,
+                    StartLength = leftover.Length, Remaining = leftover.Length - material.TrimCut,
+                };
+            else if (length <= material.StockLength - material.TrimCut)
+                bar = new PlannedBar
+                {
+                    Material = material, Source = "New stock",
+                    StartLength = material.StockLength, Remaining = material.StockLength - material.TrimCut,
+                };
+            else
+            {
+                MessageBox.Show($"{length:0.###} {UnitLabel} is longer than a full stick of {material.Name}.",
+                    "Recut", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+            bar.Number = bars.Count == 0 ? 1 : bars.Max(b => b.Number) + 1;
+        }
+
+        var cut = new PlannedCut(bar, item) { Note = note };
+        ApplySpacer(cut);
+        var firstPendingOnBar = bar.Cuts.FindIndex(c => c.Status == CutStatus.Pending);
+        bar.Cuts.Insert(firstPendingOnBar < 0 ? bar.Cuts.Count : firstPendingOnBar, cut);
+        bar.Remaining = Math.Max(0, bar.Remaining - length - material.Kerf);
+
+        var next = Plan.FirstOrDefault(c => c.Status == CutStatus.Pending);
+        Plan.Insert(next is null ? Plan.Count : Plan.IndexOf(next), cut);
+        return cut;
+    }
+
+    private void GoTo(PlannedCut cut)
+    {
+        SelectedCut = cut;
+        UpdateStick();
+        if (AutoSendNext && IsConnected) MoveTo(cut.StopPosition);
+    }
+
+    private void Record(string kind, CutItem item, Material material) =>
+        Recuts.Add(new RecutRecord { Kind = kind, Job = item.Job, Material = material.Name, Label = item.Label, Length = item.Length });
+
     // ---- Short-part spacer ----
+
+    private void ApplySpacer(PlannedCut cut)
+    {
+        if (SpacerLengthMm <= 0 || cut.Length >= Models.Units.Convert(SpacerMinPartMm, LengthUnit.Millimeters, Units)) return;
+        cut.Spacer = Models.Units.Convert(SpacerLengthMm, LengthUnit.Millimeters, Units);
+        cut.SpacerNote = $"USE {SpacerLengthMm:0.#} mm SPACER";
+    }
 
     private double _spacerMinPartMm = 100;
     private double _spacerLengthMm = 300;
@@ -1415,7 +1539,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             _store.Save(new AppData
             {
-                Materials = Materials.ToList(), Leftovers = Leftovers.ToList(), Serial = Serial, Units = Units,
+                Materials = Materials.ToList(), Leftovers = Leftovers.ToList(), Recuts = Recuts.ToList(), Serial = Serial, Units = Units,
                 JobsFolder = JobsFolder, ImportedJobFiles = _importedJobFiles,
                 SpacerMinPartMm = SpacerMinPartMm, SpacerLengthMm = SpacerLengthMm,
             });

@@ -58,6 +58,8 @@ public sealed class DataStore
     {
         data.Materials ??= new();
         data.Leftovers ??= new();
+        data.Recuts ??= new();
+        data.Recuts.RemoveAll(r => r is null);
         data.Serial ??= new();
         data.JobsFolder ??= "";
         data.ImportedJobFiles = data.ImportedJobFiles is null
