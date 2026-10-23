@@ -251,6 +251,11 @@
             <!-- Cutting -->
             <TabItem Header="Cutting">
                 <DockPanel Margin="8">
+                    <!-- Full width along the bottom so every piece of the stick has room for its length. -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding CurrentStickTitle}" FontSize="15" FontWeight="Bold" TextTrimming="CharacterEllipsis" Margin="0,0,0,4" />
+                        <c:StickView Stick="{Binding CurrentStick}" Height="70" />
+                    </StackPanel>
                     <Border DockPanel.Dock="Right" Width="440" Margin="12,0,0,0" Padding="16" Background="#EAF3FB"
                             BorderBrush="#1E6FB8" BorderThickness="2" CornerRadius="6">
                         <!-- Star rows share the panel height; the big numbers sit in Viewboxes so they shrink instead of clipping. -->
@@ -278,7 +283,6 @@
                                         </Style>
                                     </RowDefinition.Style>
                                 </RowDefinition>
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" FontSize="20" FontWeight="Bold" TextTrimming="CharacterEllipsis">
                                 <Run Text="NOW CUTTING" Foreground="#1E6FB8" /><Run Text="   " /><Run Text="{Binding CurrentMaterialName, Mode=OneWay}" />
@@ -349,10 +353,6 @@
                                     <TextBlock Grid.Row="2" Text="{Binding NewLeftoverText}" FontSize="16" TextWrapping="Wrap" />
                                 </Grid>
                             </Border>
-                            <StackPanel Grid.Row="8" Margin="0,12,0,0">
-                                <TextBlock Text="{Binding CurrentStickTitle}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,4" />
-                                <c:StickView Stick="{Binding CurrentStick}" Height="70" />
-                            </StackPanel>
                         </Grid>
                     </Border>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">

@@ -74,9 +74,8 @@ public sealed class StickView : FrameworkElement
                 _ => PendingFill,
             };
             dc.DrawRectangle(fill, Outline, r);
-            var text = state == PieceState.Done ? $"✓ {length:0.###}" : $"{length:0.###}";
-            DrawText(dc, text, new Point(r.X + 4, r.Y + h / 2 - 10), state == PieceState.Current ? 18 : 14,
-                Brushes.Black, r.Width - 8);
+            var size = state == PieceState.Current ? 18.0 : 14.0;
+            DrawFitted(dc, state == PieceState.Done ? $"✓ {length:0.###}" : $"{length:0.###}", $"{length:0.###}", r, size, h);
             if (state == PieceState.Current) current = r;
             if (s.Kerf > 0) dc.DrawRectangle(KerfFill, null, Segment(s.Kerf));
         }
@@ -93,6 +92,27 @@ public sealed class StickView : FrameworkElement
 
         if (current is { } c) dc.DrawRectangle(null, CurrentOutline, new Rect(c.X + 1.5, 1.5, Math.Max(0, c.Width - 3), h - 3));
     }
+
+    /// <summary>
+    /// Draws a piece's length so it stays readable in a narrow piece: drops the check mark, then shrinks
+    /// the font (down to 9), and only then trims.
+    /// </summary>
+    private void DrawFitted(DrawingContext dc, string text, string shortText, Rect r, double size, double h)
+    {
+        var room = r.Width - 6;
+        foreach (var candidate in new[] { text, shortText })
+            for (var s = size; s >= 9; s -= 1)
+                if (Measure(candidate, s) <= room)
+                {
+                    DrawText(dc, candidate, new Point(r.X + 3, r.Y + h / 2 - s * 0.7), s, Brushes.Black, room);
+                    return;
+                }
+        DrawText(dc, shortText, new Point(r.X + 3, r.Y + h / 2 - 6), 9, Brushes.Black, room);
+    }
+
+    private double Measure(string text, double size) =>
+        new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size,
+            Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip).WidthIncludingTrailingWhitespace;
 
     private void DrawText(DrawingContext dc, string text, Point at, double size, Brush brush, double maxWidth)
     {
