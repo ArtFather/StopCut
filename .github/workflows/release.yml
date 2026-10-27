@@ -1,0 +1,37 @@
+# Builds StopCut.exe and publishes it as a GitHub release when a version tag (v1.0, v1.1, ...) is pushed.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build StopCut.exe
+        run: >
+          dotnet publish StopCut/StopCut.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish
+
+      - name: Zip it
+        shell: pwsh
+        run: Compress-Archive -Path publish/StopCut.exe -DestinationPath "StopCut-${{ github.ref_name }}-win-x64.zip"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: >
+          gh release create "${{ github.ref_name }}" "StopCut-${{ github.ref_name }}-win-x64.zip"
+          --title "StopCut ${{ github.ref_name }}" --notes-file .github/release-notes.md
