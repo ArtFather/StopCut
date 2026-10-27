@@ -41,8 +41,8 @@
         <Grid>
         <TabControl Margin="6">
 
-            <!-- Touch dashboard -->
-            <TabItem Header="Dashboard" FontSize="16">
+            <!-- Manual cut: touch pad to send the stop to any length -->
+            <TabItem Header="Manual cut" FontSize="16">
                 <Grid Margin="12" TextElement.FontSize="16">
                     <Grid.Resources>
                         <Style x:Key="PadKey" TargetType="Button">
@@ -72,75 +72,6 @@
                             <TextBlock Text="{Binding CurrentPosition}" FontSize="64" FontWeight="Bold" />
                         </Viewbox>
                         <TextBlock Text="{Binding MachineStatus}" FontSize="22" Margin="0,4,0,16" TextWrapping="Wrap" />
-
-                        <TextBlock Text="{Binding CurrentStickTitle}" FontSize="14" Margin="0,0,0,4" TextWrapping="Wrap" />
-                        <c:StickView Stick="{Binding CurrentStick}" Height="60" Margin="0,0,0,12" />
-
-                        <Border Padding="12,6" Margin="0,0,0,16" Background="#EAF3FB" BorderBrush="#1E6FB8" BorderThickness="2" CornerRadius="6">
-                            <StackPanel>
-                                <TextBlock FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis">
-                                    <Run Text="NOW CUTTING" Foreground="#1E6FB8" /><Run Text="   " /><Run Text="{Binding CurrentMaterialName, Mode=OneWay}" />
-                                </TextBlock>
-                                <Border Margin="0,6,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="SlateGray" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding StickIsLeftover}" Value="True">
-                                                    <Setter Property="Background" Value="#6A1B9A" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding StickToUse}" Value="">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Viewbox StretchDirection="DownOnly">
-                                        <TextBlock Text="{Binding StickToUse}" FontSize="36" FontWeight="Bold" Foreground="White" />
-                                    </Viewbox>
-                                </Border>
-                                <Border Margin="0,0,0,6" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left" Background="#C62828">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SpacerWarning}" Value="">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Viewbox StretchDirection="DownOnly">
-                                        <TextBlock Text="{Binding SpacerWarning}" FontSize="36" FontWeight="Bold" Foreground="White" />
-                                    </Viewbox>
-                                </Border>
-                                <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
-                                    <TextBlock Text="{Binding NowCuttingSize}" FontSize="72" FontWeight="Bold" />
-                                </Viewbox>
-                                <TextBlock Text="{Binding NowCuttingLabel}" FontSize="20" TextWrapping="Wrap" />
-                                <TextBlock FontSize="18" Foreground="DimGray" Margin="0,6,0,0" TextWrapping="Wrap">
-                                    <Run Text="Last cut:" /> <Run Text="{Binding LastCutSize, Mode=OneWay}" FontWeight="Bold" />
-                                    <Run Text="{Binding LastCutLabel, Mode=OneWay}" />
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                            <Border Margin="0,0,0,16" Padding="10" Background="#E8F7E4" BorderBrush="ForestGreen" BorderThickness="2" CornerRadius="6">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding NewLeftoverTag}" Value="">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <StackPanel>
-                                    <TextBlock Text="NEW LEFTOVER - WRITE ON PIECE" FontSize="16" FontWeight="Bold" Foreground="DarkGreen" />
-                                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
-                                        <TextBlock Text="{Binding NewLeftoverTag}" FontSize="72" FontWeight="Bold" Foreground="DarkGreen" />
-                                    </Viewbox>
-                                    <TextBlock Text="{Binding NewLeftoverText}" FontSize="16" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
 
                         <TextBlock Text="Go to" Foreground="Gray" />
                         <Border BorderBrush="SteelBlue" BorderThickness="3" CornerRadius="6" Padding="12,4" Background="White">

@@ -33,7 +33,7 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
 
 - **Units**: Settings > Units switches between inches and millimeters. Switching converts every saved
   length. The amp's own units (its MMEnable setting) are read when you connect, and positions are converted both ways.
-- **Dashboard**: touch-screen page with the current position, a big number pad, GO, HOME and STOP.
+- **Manual cut**: touch-screen page with the current position, a big number pad, GO, HOME and STOP.
 - **Cut lists**: add a material (stock length, kerf, end trim, minimum leftover length to keep),
   then add the parts it needs: label, length and quantity. Each material keeps its own list.
 - **Jobs**: every cut line belongs to a job. Pick the job at the top of the Cut lists and Cutting tabs to see,
@@ -46,7 +46,7 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
   counts are kept for parts still in the file). "Update from folder" (Settings menu and Cut lists tab) rescans now.
 - **Material library** (Settings menu): add, edit and delete materials (code, name, stock length, kerf, end trim,
   minimum leftover). Deleting a material that cut lines or leftovers still use asks first and lists what goes with it.
-- **Now cutting**: the Cutting tab and the dashboard show the length and part being cut in very large text, the last
+- **Now cutting**: the Cutting tab shows the length and part being cut in very large text, the last
   cut below it, and a to-scale drawing of the current stick (trim, pieces, kerfs, leftover) where the piece being cut is orange,
   pieces already cut are green with a check mark, pieces still to cut are grey and the leftover is blue. The material being cut is shown beside NOW CUTTING.
 - **Planning**: "Plan material" plans the selected material; "Plan whole job" plans every material of the job, one
@@ -59,7 +59,7 @@ Data is saved to `%AppData%\StopCut\data.json` (data from older versions in `%Ap
   The stop moves to part length + 300 mm, the plan marks those cuts, and NOW CUTTING shows "USE 300 mm SPACER" in red.
   Both numbers are set in the Material library (0 turns it off).
 - **Leftover IDs**: every leftover gets an ID made of its material's letter and a number (A1, A2 for one material, B1 for the next; letters are set in the Material library, and numbers of used-up leftovers are reused) to write on the physical piece. When cutting
-  creates a leftover, its ID is shown in large green text on the Cutting tab and the dashboard. The plan says
+  creates a leftover, its ID is shown in large green text on the Cutting tab. The plan says
   "Use leftover A12" when it uses one.
 - **Cutting**: pick a material and press **Build plan**. Leftovers of that material are used first,
   then new stock, longest parts first. Select a cut and press **Send position** to move the stop,

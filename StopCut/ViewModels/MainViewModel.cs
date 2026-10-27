@@ -447,9 +447,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand PadClearCommand { get; }
     public ICommand PadGoCommand { get; }
 
-    // ---- Dashboard number pad ----
+    // ---- Manual cut number pad ----
 
-    /// <summary>Length typed on the dashboard pad, in the current units.</summary>
+    /// <summary>Length typed on the Manual cut pad, in the current units.</summary>
     public string PadEntry { get => _padEntry; set => Set(ref _padEntry, value); }
 
     private void PadKey(string? key)
